@@ -30,6 +30,11 @@ type SSHKeyModelBuilder struct {
 var _ fi.ModelBuilder = &SSHKeyModelBuilder{}
 
 func (b *SSHKeyModelBuilder) Build(c *fi.ModelBuilderContext) error {
+
+	if b.KopsModelContext.Cluster.Spec.SSHKeyName != "" {
+		return nil
+	}
+
 	name, err := b.SSHKeyName()
 	if err != nil {
 		return err

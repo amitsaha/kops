@@ -56,6 +56,7 @@ type LaunchConfiguration struct {
 
 	ImageID            *string
 	InstanceType       *string
+	ExistingSSHKey     *string
 	SSHKey             *SSHKey
 	SecurityGroups     []*SecurityGroup
 	AssociatePublicIP  *bool
@@ -442,7 +443,10 @@ func (_ *LaunchConfiguration) RenderTerraform(t *terraform.TerraformTarget, a, e
 		tf.SpotPrice = aws.String(e.SpotPrice)
 	}
 
-	if e.SSHKey != nil {
+	// If a ssh keyname has been specified, set it to the name
+	if e.ExistingSSHKey != nil {
+		tf.KeyName = terraform.LiteralExpression(*e.ExistingSSHKey)
+	} else if e.SSHKey != nil {
 		tf.KeyName = e.SSHKey.TerraformLink()
 	}
 
