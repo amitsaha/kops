@@ -179,6 +179,15 @@ cat > kube_env.yaml << '__EOF_KUBE_ENV'
 __EOF_KUBE_ENV
 
 download-release
+
+# Fix for https://github.com/kubernetes/kops/issues/4049
+# solution: https://github.com/kubernetes/kops/issues/4049#issuecomment-399030872
+echo "Set CPU accounting and Memory accounting to kubelet service"
+sudo mkdir -p /etc/systemd/system/kubelet.service.d/
+echo "[Service]" | tee /etc/systemd/system/kubelet.service.d/11-cgroups.conf
+echo "CPUAccounting=true" | tee --append /etc/systemd/system/kubelet.service.d/11-cgroups.conf
+echo "MemoryAccounting=true" | tee --append /etc/systemd/system/kubelet.service.d/11-cgroups.conf
+
 echo "== nodeup node config done =="
 `
 
