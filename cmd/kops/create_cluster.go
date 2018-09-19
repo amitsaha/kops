@@ -84,6 +84,7 @@ type CreateClusterOptions struct {
 	DNSZone              string
 	AdminAccess          []string
 	SSHAccess            []string
+	SSHKeyName           string
 	Networking           string
 	NodeSecurityGroups   []string
 	MasterSecurityGroups []string
@@ -246,7 +247,9 @@ func NewCmdCreateCluster(f *util.Factory, out io.Writer) *cobra.Command {
 
 			options.ClusterName = rootCommand.clusterName
 
-			if sshPublicKey != "" {
+			// If an existing key pair name has not been specified
+			// and a public key path has been specified
+			if options.SSHKeyName == "" && sshPublicKey != "" {
 				options.SSHPublicKeys, err = loadSSHPublicKeys(sshPublicKey)
 				if err != nil {
 					exitWithError(fmt.Errorf("error reading SSH key file %q: %v", sshPublicKey, err))
@@ -278,6 +281,7 @@ func NewCmdCreateCluster(f *util.Factory, out io.Writer) *cobra.Command {
 	cmd.Flags().StringVar(&options.KubernetesVersion, "kubernetes-version", options.KubernetesVersion, "Version of kubernetes to run (defaults to version in channel)")
 
 	cmd.Flags().StringVar(&sshPublicKey, "ssh-public-key", sshPublicKey, "SSH public key to use (defaults to ~/.ssh/id_rsa.pub on AWS)")
+	cmd.Flags().StringVar(&options.SSHKeyName, "ssh-key-name", options.SSHKeyName, "Existing AWS Key pair name to use")
 
 	cmd.Flags().StringVar(&options.NodeSize, "node-size", options.NodeSize, "Set instance size for nodes")
 
@@ -1079,6 +1083,11 @@ func RunCreateCluster(f *util.Factory, out io.Writer, c *CreateClusterOptions) e
 		cluster.Spec.SSHAccess = c.SSHAccess
 	}
 
+	// Set SSH Key pair name if specified for AWS
+	if c.SSHKeyName != "" && api.CloudProviderID(cluster.Spec.CloudProvider) == api.CloudProviderAWS {
+		cluster.Spec.SSHKeyName = c.SSHKeyName
+	}
+
 	if err := commands.SetClusterFields(c.Overrides, cluster, instanceGroups); err != nil {
 		return err
 	}
@@ -1156,7 +1165,7 @@ func RunCreateCluster(f *util.Factory, out io.Writer, c *CreateClusterOptions) e
 		return fmt.Errorf("error writing completed cluster spec: %v", err)
 	}
 
-	if len(c.SSHPublicKeys) == 0 {
+	if c.SSHKeyName == "" && len(c.SSHPublicKeys) == 0 {
 		autoloadSSHPublicKeys := true
 		switch c.Cloud {
 		case "gce":
@@ -1179,7 +1188,7 @@ func RunCreateCluster(f *util.Factory, out io.Writer, c *CreateClusterOptions) e
 		}
 	}
 
-	if len(c.SSHPublicKeys) != 0 {
+	if c.SSHKeyName == "" && len(c.SSHPublicKeys) != 0 {
 		sshCredentialStore, err := clientset.SSHCredentialStore(cluster)
 		if err != nil {
 			return err

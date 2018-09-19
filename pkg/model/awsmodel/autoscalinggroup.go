@@ -115,7 +115,9 @@ func (b *AutoscalingGroupModelBuilder) Build(c *fi.ModelBuilderContext) error {
 				t.SecurityGroups = append(t.SecurityGroups, sgTask)
 			}
 
-			if t.SSHKey, err = b.LinkToSSHKey(); err != nil {
+			if b.AWSModelContext.KopsModelContext.Cluster.Spec.SSHKeyName != "" {
+				t.ExistingSSHKey = &b.AWSModelContext.KopsModelContext.Cluster.Spec.SSHKeyName
+			} else if t.SSHKey, err = b.LinkToSSHKey(); err != nil {
 				return err
 			}
 
